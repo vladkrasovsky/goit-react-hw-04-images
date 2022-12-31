@@ -15,6 +15,17 @@ const config = {
 async function searchImages(query, page = 1) {
   const urlAXIOS = `?page=${page}&q=${query}`;
   const { data } = await axios.get(urlAXIOS, config);
+
+  const normalizedHits = data.hits.map(
+    ({ id, largeImageURL, tags, webformatURL }) => ({
+      id,
+      largeImageURL,
+      tags,
+      webformatURL,
+    })
+  );
+
+  data.hits = normalizedHits;
   return data;
 }
 
