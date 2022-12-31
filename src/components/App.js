@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import pixabayAPI from 'services/pixabay-api';
 import { Layout } from './Layout';
@@ -9,106 +9,74 @@ import Button from './Button';
 import Modal from './Modal';
 import Loader from './Loader';
 
-class App extends Component {
-  state = {
-    status: 'idle',
-    query: '',
-    images: [],
-    activeImage: null,
-    page: 1,
-    totalPages: 1,
-  };
+const App = () => {
+  const [status, setStatus] = useState('idle');
+  const [query, setQuery] = useState('');
+  const [images, setImages] = useState([]);
+  const [activeImage, setActiveImage] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  componentDidUpdate(prevProps, prevState) {
-    const { query: prevQuery, page: prevPage } = prevState;
-    const { query, page } = this.state;
-
+  useEffect(() => {
     if (!query) return;
+    getImages();
+    // eslint-disable-next-line
+  }, [query, page]);
 
-    if (page !== prevPage || query !== prevQuery) {
-      this.getImages();
-    }
-  }
-
-  async getImages() {
-    const { query, page, images } = this.state;
-
-    this.setStatus('pending');
-
+  const getImages = async () => {
+    setStatus('pending');
     try {
       const { hits, totalHits } = await pixabayAPI.searchImages(query, page);
-
       if (!hits.length) {
         toast.info('Oooh oh, there are no results that match your query.');
         return;
       }
-
-      this.setState({
-        images: [...images, ...hits],
-      });
-
+      setImages([...images, ...hits]);
       if (page === 1) {
         toast.info(`Hooray! We found ${totalHits} image(s).`);
-        this.calculateTotalPages(totalHits);
+        calculateTotalPages(totalHits);
       }
     } catch (error) {
       toast.error(error.message);
     } finally {
-      this.setStatus('resolved');
+      setStatus('resolved');
     }
-  }
-
-  calculateTotalPages(total) {
-    this.setState({ totalPages: Math.ceil(total / 12) });
-  }
-
-  setNewQuery = query => {
-    this.setState({
-      query,
-      page: 1,
-      images: [],
-      totalPages: 1,
-      status: 'idle',
-    });
   };
 
-  setActiveImageUrl = url => this.setState({ activeImage: url });
+  const calculateTotalPages = total => setTotalPages(Math.ceil(total / 12));
 
-  setNextPage = () => this.setState(({ page }) => ({ page: page + 1 }));
+  const setNewQuery = query => {
+    setStatus('idle');
+    setQuery(query);
+    setPage(1);
+    setImages([]);
+    setTotalPages(1);
+  };
 
-  setStatus = status => this.setState({ status });
+  const setNextPage = () => setPage(page => page + 1);
 
-  render() {
-    const { status, images, activeImage, page, totalPages } = this.state;
+  const isVisibleButton = page < totalPages && status === 'resolved';
 
-    const isVisibleButton = page < totalPages && status === 'resolved';
+  return (
+    <Layout>
+      <Searchbar onSearch={setNewQuery} />
 
-    return (
-      <Layout>
-        <Searchbar onSearch={this.setNewQuery} />
+      {images.length > 0 && (
+        <ImageGallery images={images} onClick={setActiveImage} />
+      )}
 
-        {images.length > 0 && (
-          <ImageGallery images={images} onClick={this.setActiveImageUrl} />
-        )}
+      {activeImage && (
+        <Modal url={activeImage} onClose={() => setActiveImage(null)} />
+      )}
 
-        {activeImage && (
-          <Modal
-            url={activeImage}
-            onClose={() => this.setActiveImageUrl(null)}
-          />
-        )}
+      {isVisibleButton && <Button onClick={setNextPage}>Load More</Button>}
 
-        {isVisibleButton && (
-          <Button onClick={this.setNextPage}>Load More</Button>
-        )}
+      {status === 'pending' && <Loader />}
 
-        {status === 'pending' && <Loader />}
-
-        <ToastContainer theme="colored" autoClose={3000} />
-        <GlobalStyle />
-      </Layout>
-    );
-  }
-}
+      <ToastContainer theme="colored" autoClose={3000} />
+      <GlobalStyle />
+    </Layout>
+  );
+};
 
 export default App;
