@@ -1,56 +1,55 @@
-import { Component } from 'react';
+import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { toast } from 'react-toastify';
 import { Form, Button, ButtonLabel, Input } from './SearchForm.styled';
 
-class SearchForm extends Component {
-  static propTypes = {
-    onSubmit: PropTypes.func.isRequired,
-  };
+const SearchForm = ({ onSubmit }) => {
+  const [query, setQuery] = useState('');
 
-  state = {
-    query: '',
-  };
-
-  handleSubmit = e => {
+  const handleSubmit = e => {
     e.preventDefault();
-
-    const { query } = this.state;
     const normilizedQuery = query.trim();
 
-    this.props.onSubmit(normilizedQuery);
-    this.setState({ query: normilizedQuery });
+    onSubmit(normilizedQuery);
+    setQuery(normilizedQuery);
 
     if (!normilizedQuery) {
       toast.warning('Please, enter your search query.');
     }
   };
 
-  handleInputChange = ({ target: { name, value } }) => {
-    this.setState({ [name]: value });
+  const handleInputChange = ({ target: { name, value } }) => {
+    switch (name) {
+      case 'query':
+        setQuery(value);
+        break;
+
+      default:
+        throw new Error('Unsupported input name');
+    }
   };
 
-  render() {
-    const { query } = this.state;
+  return (
+    <Form onSubmit={handleSubmit}>
+      <Button type="submit">
+        <ButtonLabel>Search</ButtonLabel>
+      </Button>
 
-    return (
-      <Form onSubmit={this.handleSubmit}>
-        <Button type="submit">
-          <ButtonLabel>Search</ButtonLabel>
-        </Button>
+      <Input
+        type="text"
+        autoComplete="off"
+        autoFocus
+        placeholder="Search images and photos"
+        name="query"
+        value={query}
+        onChange={handleInputChange}
+      />
+    </Form>
+  );
+};
 
-        <Input
-          type="text"
-          autoComplete="off"
-          autoFocus
-          placeholder="Search images and photos"
-          name="query"
-          value={query}
-          onChange={this.handleInputChange}
-        />
-      </Form>
-    );
-  }
-}
+SearchForm.propTypes = {
+  onSubmit: PropTypes.func.isRequired,
+};
 
 export default SearchForm;
